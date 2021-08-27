@@ -19,7 +19,7 @@ if __name__ == '__main__':
 # flake8: noqa: E402
 from localstack.utils.common import (
     download, parallelize, run, mkdir, load_file, save_file, unzip, untar, rm_rf,
-    chmod_r, is_alpine, in_docker, get_arch, new_tmp_file)
+    chmod_r, is_aarch64, is_alpine, in_docker, get_arch, new_tmp_file)
 
 THIS_PATH = os.path.dirname(os.path.realpath(__file__))
 ROOT_PATH = os.path.realpath(os.path.join(THIS_PATH, '..'))
@@ -81,6 +81,11 @@ def install_elasticsearch(version=None):
     if not os.path.exists(installed_executable):
         log_install_msg('Elasticsearch (%s)' % version)
         es_url = ELASTICSEARCH_URLS.get(version)
+        if is_aarch64():
+            arch = 'aarch64'
+        else:
+            arch = 'x86_64'
+        es_url.replace('<arch>', arch)
         if not es_url:
             raise Exception('Unable to find download URL for Elasticsearch version "%s"' % version)
         install_dir_parent = os.path.dirname(install_dir)
@@ -153,7 +158,17 @@ def install_local_kms():
     if not os.path.exists(binary_path):
         log_install_msg('KMS')
         mkdir(INSTALL_DIR_KMS)
-        kms_url = KMS_URL_PATTERN.replace('<arch>', local_arch)
+        alpine = ''
+        operating_system = local_arch
+        processor = 'amd64'
+        if (local_arch == 'osx'):
+            operating_system = 'darwin'
+        elif (local_arch == 'alpine'):
+            operating_system = 'linux'
+            alpine = '-alpine'
+        if is_aarch64():
+            processor = 'arm64'
+        kms_url = KMS_URL_PATTERN.replace('<os>', operating_system).replace('<processor>', processor).replace('<alpine>', alpine)
         download(kms_url, binary_path)
         chmod_r(binary_path, 0o777)
 

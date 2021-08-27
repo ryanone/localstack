@@ -1,0 +1,95 @@
+diff --git a/Makefile b/Makefile
+index 12a99a7d..d04d3c1c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -171,6 +171,7 @@ clean:             ## Clean up (npm dependencies, downloaded infrastructure code
+ 	rm -rf localstack/infra/elasticsearch
+ 	rm -rf localstack/infra/elasticmq
+ 	rm -rf localstack/infra/dynamodb
++	rm -rf localstack/infra/kms
+ 	rm -rf localstack/node_modules/
+ 	rm -rf $(VENV_DIR)
+ 	rm -f localstack/utils/kinesis/java/com/atlassian/*.class
+diff --git a/localstack/constants.py b/localstack/constants.py
+index 9f5da38b..6b98157a 100644
+--- a/localstack/constants.py
++++ b/localstack/constants.py
+@@ -92,7 +92,7 @@ ELASTICSEARCH_DELETE_MODULES = ['ingest-geoip']
+ ELASTICMQ_JAR_URL = 'https://s3-eu-west-1.amazonaws.com/softwaremill-public/elasticmq-server-0.15.7.jar'
+ STS_JAR_URL = 'https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-sts/1.11.14/aws-java-sdk-sts-1.11.14.jar'
+ STEPFUNCTIONS_ZIP_URL = 'https://s3.amazonaws.com/stepfunctionslocal/StepFunctionsLocal.zip'
+-KMS_URL_PATTERN = 'https://s3-eu-west-2.amazonaws.com/local-kms/localstack/v3/local-kms.<arch>.bin'
++KMS_URL_PATTERN = 'https://s3-eu-west-2.amazonaws.com/local-kms/3/local-kms_<os>-<processor><alpine>.bin'
+ 
+ # TODO: Temporarily using a fixed version of DDB in Alpine, as we're hitting a SIGSEGV JVM crash with latest
+ DYNAMODB_JAR_URL_ALPINE = 'https://github.com/whummer/dynamodb-local/raw/master/etc/DynamoDBLocal.zip'
+diff --git a/localstack/services/install.py b/localstack/services/install.py
+index a23d4986..14171536 100644
+--- a/localstack/services/install.py
++++ b/localstack/services/install.py
+@@ -19,7 +19,7 @@ if __name__ == '__main__':
+ # flake8: noqa: E402
+ from localstack.utils.common import (
+     download, parallelize, run, mkdir, load_file, save_file, unzip, untar, rm_rf,
+-    chmod_r, is_alpine, in_docker, get_arch)
++    chmod_r, is_alpine, is_aarch64, in_docker, get_arch, get_os)
+ 
+ THIS_PATH = os.path.dirname(os.path.realpath(__file__))
+ ROOT_PATH = os.path.realpath(os.path.join(THIS_PATH, '..'))
+@@ -153,7 +153,17 @@ def install_local_kms():
+     if not os.path.exists(binary_path):
+         log_install_msg('KMS')
+         mkdir(INSTALL_DIR_KMS)
+-        kms_url = KMS_URL_PATTERN.replace('<arch>', local_arch)
++        alpine = ''
++        operating_system = local_arch
++        processor = 'amd64'
++        if (local_arch == 'osx'):
++            operating_system = 'darwin'
++        elif (local_arch == 'alpine'):
++            operating_system = 'linux'
++            alpine = '-alpine'
++        if is_aarch64:
++            processor = 'arm64'
++        kms_url = KMS_URL_PATTERN.replace('<os>', operating_system).replace('<processor>', processor).replace('<alpine>', alpine)
+         download(kms_url, binary_path)
+         chmod_r(binary_path, 0o777)
+ 
+diff --git a/localstack/utils/common.py b/localstack/utils/common.py
+index bec2cbc6..04a9f173 100644
+--- a/localstack/utils/common.py
++++ b/localstack/utils/common.py
+@@ -16,6 +16,7 @@ import tarfile
+ import zipfile
+ import binascii
+ import calendar
++import platform
+ import tempfile
+ import functools
+ import threading
+@@ -862,6 +863,14 @@ def is_linux():
+     return bootstrap.is_linux()
+ 
+ 
++def get_os():
++    if is_mac_os():
++        return 'darwin'
++    if is_linux():
++        return 'linux'
++    raise Exception('Unable to determine operating system')
++
++
+ def is_alpine():
+     try:
+         with MUTEX_CLEAN:
+@@ -886,6 +895,10 @@ def get_arch():
+     raise Exception('Unable to determine system architecture')
+ 
+ 
++def is_aarch64():
++    return platform.processor() == 'aarch64'
++
++
+ def is_command_available(cmd):
+     try:
+         run('which %s' % cmd, print_error=False)

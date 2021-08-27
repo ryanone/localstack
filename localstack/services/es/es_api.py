@@ -9,7 +9,7 @@ from localstack.utils import persistence
 from localstack.services import generic_proxy
 from localstack.utils.aws import aws_stack
 from localstack.constants import TEST_AWS_ACCOUNT_ID, ELASTICSEARCH_DEFAULT_VERSION, ELASTICSEARCH_URLS
-from localstack.utils.common import to_str, FuncThread, get_service_protocol
+from localstack.utils.common import is_aarch64, to_str, FuncThread, get_service_protocol
 from localstack.utils.tagging import TaggingService
 from localstack.utils.analytics import event_publisher
 
@@ -173,14 +173,15 @@ def get_domain_status(domain_name, deleted=False):
 
 def get_install_version_for_api_version(version):
     result = ELASTICSEARCH_DEFAULT_VERSION
-    if version.startswith('6.'):
-        result = '6.7.0'
-    elif version == '7.4':
-        result = '7.4.0'
-    elif version == '7.7':
-        result = '7.7.0'
-    if not result.startswith(result):
-        LOG.info('Elasticsearch version %s not yet supported, defaulting to %s' % (version, result))
+    if not is_aarch64():
+        if version.startswith('6.'):
+            result = '6.7.0'
+        elif version == '7.4':
+            result = '7.4.0'
+        elif version == '7.7':
+            result = '7.7.0'
+        if not result.startswith(result):
+            LOG.info('Elasticsearch version %s not yet supported, defaulting to %s' % (version, result))
     return result
 
 

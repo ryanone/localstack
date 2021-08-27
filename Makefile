@@ -171,6 +171,7 @@ clean:             ## Clean up (npm dependencies, downloaded infrastructure code
 	rm -rf localstack/infra/elasticsearch
 	rm -rf localstack/infra/elasticmq
 	rm -rf localstack/infra/dynamodb
+	rm -rf localstack/infra/kms
 	rm -rf localstack/node_modules/
 	rm -rf $(VENV_DIR)
 	rm -f localstack/utils/kinesis/java/com/atlassian/*.class

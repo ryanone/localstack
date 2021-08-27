@@ -1,0 +1,42 @@
+diff --git a/Makefile b/Makefile
+index 12a99a7d..e000d44e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -7,6 +7,7 @@ DOCKER_SQUASH ?= --squash
+ VENV_DIR ?= .venv
+ PIP_CMD ?= pip
+ TEST_PATH ?= .
++ARCH ?= $(shell uname -p)
+ 
+ ifeq ($(OS), Windows_NT)
+ 	VENV_RUN = . $(VENV_DIR)/Scripts/activate
+@@ -14,6 +15,12 @@ else
+ 	VENV_RUN = . $(VENV_DIR)/bin/activate
+ endif
+ 
++ifeq ($(ARCH), aarch64)
++	DOCKER_BASE_BUILD = docker build $(DOCKER_SQUASH) -t $(IMAGE_NAME_BASE) -f bin/aarch64.Dockerfile.base .
++else
++	DOCKER_BASE_BUILD = docker build $(DOCKER_SQUASH) -t $(IMAGE_NAME_BASE) -f bin/x86_64.Dockerfile.base .
++endif
++
+ usage:             ## Show this help
+ 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
+ 
+@@ -66,7 +73,7 @@ docker-squash:
+ 		docker-squash -t $(IMAGE_NAME):$(IMAGE_TAG) $(IMAGE_NAME):$(IMAGE_TAG)
+ 
+ docker-build-base:
+-	docker build $(DOCKER_SQUASH) -t $(IMAGE_NAME_BASE) -f bin/Dockerfile.base .
++	$(DOCKER_BASE_BUILD);
+ 	docker tag $(IMAGE_NAME_BASE) $(IMAGE_NAME_BASE):$(IMAGE_TAG)
+ 	docker tag $(IMAGE_NAME_BASE):$(IMAGE_TAG) $(IMAGE_NAME_BASE):latest
+ 
+@@ -171,6 +178,7 @@ clean:             ## Clean up (npm dependencies, downloaded infrastructure code
+ 	rm -rf localstack/infra/elasticsearch
+ 	rm -rf localstack/infra/elasticmq
+ 	rm -rf localstack/infra/dynamodb
++	rm -rf localstack/infra/kms
+ 	rm -rf localstack/node_modules/
+ 	rm -rf $(VENV_DIR)
+ 	rm -f localstack/utils/kinesis/java/com/atlassian/*.class

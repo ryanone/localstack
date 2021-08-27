@@ -16,6 +16,7 @@ import tarfile
 import zipfile
 import binascii
 import calendar
+import platform
 import tempfile
 import functools
 import threading
@@ -878,6 +879,14 @@ def is_linux():
     return bootstrap.is_linux()
 
 
+def get_os():
+    if is_mac_os():
+        return 'darwin'
+    if is_linux():
+        return 'linux'
+    raise Exception('Unable to determine operating system')
+
+
 def is_alpine():
     try:
         with MUTEX_CLEAN:
@@ -900,6 +909,10 @@ def get_arch():
     if is_linux():
         return 'linux'
     raise Exception('Unable to determine system architecture')
+
+
+def is_aarch64():
+    return platform.processor() == 'aarch64'
 
 
 def is_command_available(cmd):
